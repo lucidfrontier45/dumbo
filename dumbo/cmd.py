@@ -16,6 +16,7 @@
 
 import sys
 import os
+import gzip, bz2
 
 from dumbo.util import (dumpcode, Options, loadcode, dumptext, loadtext,
     configopts, parseargs, execute, envdef)
@@ -135,6 +136,14 @@ def get(path1, path2, opts):
     opts += Options(configopts('get'))
     return create_filesystem(opts).get(path1, path2, opts)
 
+def wrapped_open(filename):
+    """automatically open gz, bz2 and other files based on the extensions"""
+    if filename.endswith(".gz"):
+        return gzip.open(filename)
+    elif filename.endswith(".bz2"):
+        return bz2.BZ2File(filename)
+    else:
+        return open(filename)
 
 def encodepipe(opts=None):
     opts = opts or Options()
@@ -143,7 +152,7 @@ def encodepipe(opts=None):
     opts.remove(*keys)
 
     ofiles = addedopts['file']
-    files = map(open, ofiles) if ofiles else [sys.stdin]
+    files = map(wrapped_open, ofiles) if ofiles else [sys.stdin]
 
     loadfun = loadcode if addedopts['alreadycoded'] else loadtext
     addpath = addedopts['addpath']
@@ -161,7 +170,7 @@ def encodepipe(opts=None):
 def decodepipe(opts=None):
     opts = opts or Options()
     ofiles = opts.pop('file')
-    files = map(open, ofiles) if ofiles else [sys.stdin]
+    files = map(wrapped_open, ofiles) if ofiles else [sys.stdin]
 
     for _file in files:
         outputs = loadcode(line[:-1] for line in _file)
